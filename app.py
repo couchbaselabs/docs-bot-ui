@@ -11,7 +11,28 @@ st.set_page_config(
 )
 
 # Constants
-API_BASE_URL = "http://localhost:8000"
+API_BASE_URL = st.secrets.get("app", {}).get("api_base_url", "http://localhost:8000")
+
+def check_password():
+    """Returns `True` if the user had the correct password."""
+
+    def password_entered():
+        """Checks whether a password entered by the user is correct."""
+        if st.session_state["password"] == st.secrets["app"]["password"]:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # Don't store password
+        else:
+            st.session_state["password_correct"] = False
+
+    # Return True if the password is validated.
+    if st.session_state.get("password_correct", False):
+        return True
+
+    # Show input for password only
+    st.text_input("Password", type="password", on_change=password_entered, key="password")
+    if "password_correct" in st.session_state:
+        st.error("😕 Password incorrect")
+    return False
 
 def initialize_session_state():
     """Initialize session state variables."""
@@ -49,6 +70,9 @@ def send_message(message: str) -> Dict:
         return None
 
 def main():
+    if not check_password():
+        st.stop()  # Do not continue if check_password() returned False
+
     st.title("📚 Docs ChatBot")
     st.markdown("""
     Welcome to the Docs ChatBot! Ask me anything about the documentation.
