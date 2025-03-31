@@ -27,20 +27,29 @@ def check_password():
 
     def password_entered():
         """Checks whether a password entered by the user is correct."""
-        if st.session_state["password"] == st.secrets["app"]["password"]:
+        if st.session_state["password"] == st.secrets["app"]["password"] and st.session_state.get("terms_accepted", False):
             st.session_state["password_correct"] = True
             del st.session_state["password"]  # Don't store password
         else:
             st.session_state["password_correct"] = False
+            if not st.session_state.get("terms_accepted", False):
+                st.error("Please accept the Terms & Conditions")
 
     # Return True if the password is validated.
     if st.session_state.get("password_correct", False):
         return True
 
-    # Show input for password only
-    st.text_input("Password", type="password", on_change=password_entered, key="password")
-    if "password_correct" in st.session_state:
-        st.error("😕 Password incorrect")
+    # Show input for password and T&C checkbox
+    st.text_input("Password", type="password", key="password")
+    st.checkbox("I accept the [Privacy Policy](https://www.couchbase.com/privacy-policy/) and [Terms of Use](https://www.couchbase.com/terms-of-use/)", key="terms_accepted")
+    
+    # Add sign in button
+    if st.button("Sign In"):
+        password_entered()
+        
+    if "password_correct" in st.session_state and not st.session_state["password_correct"]:
+        if st.session_state["password"] != st.secrets["app"]["password"]:
+            st.error("😕 Password incorrect")
     return False
 
 def initialize_session_state():
