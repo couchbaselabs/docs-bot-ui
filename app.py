@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 # Constants
-API_BASE_URL = st.secrets.get("app", {}).get("api_base_url1", "http://localhost:8000")
+API_BASE_URL = st.secrets.get("app", {}).get("api_base_url", "http://localhost:8000")
 
 def generate_user_id() -> str:
     """Generate a unique user ID based on machine information."""
