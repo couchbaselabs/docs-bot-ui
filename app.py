@@ -84,11 +84,35 @@ def send_message(message: str) -> Dict:
             f"{API_BASE_URL}/docs/rag_chat",
             json=payload
         )
-        print(response.json())
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
         st.error(f"Error communicating with the API: {str(e)}")
+        return None
+
+# Not used right now in the app
+def send_feedback(is_upvote: bool, feedback_text: str) -> Dict:
+    """Send feedback to the API."""
+    try:
+        print(f"Sending feedback: {is_upvote}, {feedback_text}")
+        payload = {
+            "data": {
+                "thread_id": st.session_state.thread_id,
+                "user_id": st.session_state.user_id,
+                "run_id": st.session_state.run_id,
+                "is_upvote": is_upvote,
+                "feedback_text": feedback_text
+            }
+        }
+        response = requests.post(
+            f"{API_BASE_URL}/docs/feedback",
+            json=payload
+        )
+        print(f"Feedback response: {response.json()}")
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Error sending feedback: {str(e)}")
         return None
 
 def main():
@@ -107,7 +131,7 @@ def main():
     # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            st.markdown(message["content"], unsafe_allow_html=True)
 
     # Chat input
     if prompt := st.chat_input("What would you like to know?"):
@@ -122,8 +146,55 @@ def main():
                 response = send_message(prompt)
                 if response:
                     response_text = response.get("content", "I apologize, but I couldn't process your request.")
-                    st.markdown(response_text)
-                    st.session_state.messages.append({"role": "assistant", "content": response_text})
+                    doc_source_urls = response.get("doc_source_urls", [])
+                    doc_source_urls = set(doc_source_urls)
+                    # Filter URLs to keep only the current version of the same document
+                    filtered_urls = []
+                    url_paths = {}
+                    
+                    for url in doc_source_urls:
+                        # Extract the base path without version
+                        parts = url.split('/')
+                        
+                        # Find the version part in the URL (like 'current', '7.1', '7.2', etc.)
+                        product_idx = -1
+                        version_idx = -1
+                        
+                        for i, part in enumerate(parts):
+                            if part in ['server', 'sdk', 'couchbase-lite', 'sync-gateway', 'java-sdk', 'python-sdk', 'go-sdk', 'nodejs-sdk', 'dotnet-sdk', 'nodejs-sdk']:
+                                product_idx = i
+                                version_idx = i + 1
+                                break
+                        
+                        if product_idx >= 0 and version_idx < len(parts):
+                            # Get the document path without the version
+                            version = parts[version_idx]
+                            
+                            # Create a key by replacing the version with a placeholder
+                            parts_copy = parts.copy()
+                            parts_copy[version_idx] = "VERSION"
+                            doc_key = '/'.join(parts_copy)
+                            
+                            # Store the URL with its version
+                            if doc_key not in url_paths or version == 'current' or (
+                                url_paths[doc_key][1] != 'current' and version > url_paths[doc_key][1]
+                            ):
+                                url_paths[doc_key] = (url, version)
+                        else:
+                            # If we can't identify the version pattern, keep the URL as is
+                            filtered_urls.append(url)
+                    
+                    # Add the filtered URLs (current version or latest version)
+                    filtered_urls.extend([info[0] for info in url_paths.values()])
+                    
+                    # Use HTML <br> for line breaks within the same paragraph
+                    source_link_string = "<br>".join(filtered_urls)
+                    
+                    # Combine all markdown content into a single string with HTML preserved
+                    formatted_response = f"{response_text}\n\n---\n\n**Sources:**\n\n{source_link_string}"
+                    st.markdown(formatted_response, unsafe_allow_html=True)
+                    
+                    st.session_state.messages.append({"role": "assistant", "content": formatted_response})
 
     # Sidebar with information
     with st.sidebar:
