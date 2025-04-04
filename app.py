@@ -94,7 +94,6 @@ def send_message(message: str) -> Dict:
 def send_feedback(is_upvote: bool, feedback_text: str) -> Dict:
     """Send feedback to the API."""
     try:
-        print(f"Sending feedback: {is_upvote}, {feedback_text}")
         payload = {
             "data": {
                 "thread_id": st.session_state.thread_id,
@@ -108,7 +107,6 @@ def send_feedback(is_upvote: bool, feedback_text: str) -> Dict:
             f"{API_BASE_URL}/docs/feedback",
             json=payload
         )
-        print(f"Feedback response: {response.json()}")
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
@@ -191,7 +189,7 @@ def main():
                     source_link_string = "<br>".join(filtered_urls)
                     
                     # Combine all markdown content into a single string with HTML preserved
-                    formatted_response = f"{response_text}\n\n---\n\n**Sources:**\n\n{source_link_string}"
+                    formatted_response = len(doc_source_urls) > 0 and f"{response_text}\n\n---\n\n**Sources:**\n\n{source_link_string}" or response_text
                     st.markdown(formatted_response, unsafe_allow_html=True)
                     
                     st.session_state.messages.append({"role": "assistant", "content": formatted_response})
