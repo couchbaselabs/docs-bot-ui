@@ -77,7 +77,11 @@ def send_message(message: str) -> Dict:
                 "thread_id": st.session_state.thread_id,
                 "user_id": st.session_state.user_id,
                 "run_id": current_run_id,
-                "messages": message
+                "messages": message,
+                "rag_config": {
+                    "version_profile":"latest",
+                    "document_source":"documentation"
+                }
             }
         }
         response = requests.post(
