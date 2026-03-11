@@ -193,7 +193,7 @@ def main():
                     source_link_string = "<br>".join(filtered_urls)
                     
                     # Combine all markdown content into a single string with HTML preserved
-                    formatted_response = len(doc_source_urls) > 0 and f"{response_text}\n\n---\n\n**Sources:**\n\n{source_link_string}" or response_text
+                    formatted_response = len(doc_source_urls) > 0 and f"{response_text}\n\n---\n\n**Related Resources:**\n\n{source_link_string}" or response_text
                     st.markdown(formatted_response, unsafe_allow_html=True)
                     
                     st.session_state.messages.append({"role": "assistant", "content": formatted_response})
